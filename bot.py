@@ -5,10 +5,14 @@ load_dotenv()
 import os
 
 TOKEN = os.getenv('TOKEN')
-FLASK_SERVER_URL = "http://kaipad123.servemp3.com:5000/upload" # ラズパイのURL
 intents = discord.Intents.default() 
 client = discord.Client(intents=intents) 
 tree = app_commands.CommandTree(client)
+
+@client.event
+async def on_ready():
+    await tree.sync()
+    print("ログインしました")
 
 @tree.command(name="upload", description="アップロード画面を開きます")
 async def upload(interaction: discord.Interaction):
