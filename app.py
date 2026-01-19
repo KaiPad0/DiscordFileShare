@@ -32,7 +32,13 @@ def upload_file():
 
         if webhook_url:
             payload = {"content": f"動画のアップロードが完了しました！\n{file_url}"}
-            requests.post(webhook_url, json=payload)
+            response = requests.post(webhook_url, json=payload)
+            
+            # ターミナルに結果を表示（トラブルシューティング用）
+            print(f"--- Discord送信ログ ---")
+            print(f"Status Code: {response.status_code}")
+            print(f"Response Body: {response.text}")
+            print(f"----------------------")
 
         return jsonify({
             'message': 'Upload successful',
