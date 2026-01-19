@@ -11,17 +11,17 @@ def send_file(filename):
 
 @app.route('/upload', methods=['GET'])
 def upload_page():
-    webhook_url = request.args.get('webhook')
-    user_id = request.args.get('userid')
-    return render_template('upload.html', webhook=webhook_url, userid=user_id)
+    #webhook_url = request.args.get('webhook')
+    #user_id = request.args.get('userid')
+    return render_template('upload.html')
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
         return "ファイルがありません", 400
     
     file = request.files['file']
-    user_id = request.form.get('userid')
-    webhook_url = request.form.get('webhook')
+    #user_id = request.form.get('userid')
+    #webhook_url = request.form.get('webhook')
 
     if file.filename == '':
         return "ファイルが選択されていません", 400
@@ -32,15 +32,16 @@ def upload_file():
         file.save(final_path)
         file_url = f"http://{request.host}/files/{final_filename}"
 
-        if webhook_url:
+        """if webhook_url:
             payload = {"content": f"Uploaded by <@{user_id}>!\n{file_url}"}
-            requests.post(webhook_url, json=payload)
+            requests.post(webhook_url, json=payload)"""
 
-        return jsonify({
+        """return jsonify({
             'message': 'Upload successful',
             'url': file_url,
             'original_name': file.filename
-        })
+        })"""
+        return file_url
     
         
 if __name__=="__main__":
