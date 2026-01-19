@@ -12,7 +12,7 @@ def send_file(filename):
 @app.route('/upload', methods=['GET'])
 def upload_page():
     webhook_url = request.args.get('webhook')
-    return render_template('upload.html', webhook=webhook_url)
+    return render_template('upload.html')
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -20,7 +20,7 @@ def upload_file():
     
     file = request.files['file']
     webhook_url = request.form.get('webhook')
-    
+
     if file.filename == '':
         return "ファイルが選択されていません", 400
     if file:

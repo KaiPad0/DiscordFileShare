@@ -3,31 +3,21 @@ from discord import app_commands
 
 TOKEN = "YOUR_BOT_TOKEN"
 FLASK_SERVER_URL = "http://kaipad123.servemp3.com:5000/upload" # ラズパイのURL
+intents = discord.Intents.default() 
+client = discord.Client(intents=intents) 
+tree = app_commands.CommandTree(client)
 
-class MyBot(discord.Client):
-    def __init__(self):
-        super().__init__(intents=discord.Intents.default())
-        self.tree = app_commands.CommandTree(self)
-
-    async def setup_hook(self):
-        await self.tree.sync()
-
-bot = MyBot()
-
-@bot.tree.command(name="upload", description="動画アップロード用のリンクを発行します")
+@tree.command(name="upload", description="アップロード画面を開きます")
 async def upload(interaction: discord.Interaction):
-    # チャンネルのWebhookを取得または作成
-    webhooks = await interaction.channel.webhooks()
-    webhook = discord.utils.get(webhooks, name="VideoUploader")
-    if not webhook:
-        webhook = await interaction.channel.create_webhook(name="VideoUploader")
+    # このコマンド専用の「後日談用URL」を取得
+    # interaction.followup.url がそれにあたります
+    webhook_url = interaction.followup.url
     
-    # Webhook URLをパラメータに仕込んだリンクを作成
-    upload_url = f"{FLASK_SERVER_URL}?webhook={webhook.url}"
+    # ユーザーには「ここからアップロードしてね」というリンクを送る
+    upload_url = f"http://あなたのサーバーIP:5000/upload?webhook={webhook_url}"
     
-    await interaction.response.send_message(
-        f"以下のリンクから動画をアップロードしてください！\n完了するとこのチャンネルに投稿されます。\n{upload_url}",
-        ephemeral=True # 本人にだけ見えるメッセージにする場合
-    )
+    await interaction.response.send_message(f"以下のリンクから動画をアップロードしてください！\n{upload_url}", ephemeral=True)
 
-bot.run(TOKEN)
+
+
+client.run(TOKEN)
