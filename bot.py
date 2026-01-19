@@ -24,7 +24,7 @@ async def upload(interaction: discord.Interaction):
     # ユーザーには「ここからアップロードしてね」というリンクを送る
     upload_url = f"http://kaipad123.servemp3.com:5000/upload?webhook={webhook_url}"
     
-    await interaction.response.send_message(f"以下のリンクから動画をアップロードしてください！\n{upload_url}", ephemeral=True)
+    await interaction.followup.send(f"以下のリンクから動画をアップロードしてください！\n{upload_url}", ephemeral=True)
 
 
 
