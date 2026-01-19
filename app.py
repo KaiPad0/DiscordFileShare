@@ -33,7 +33,7 @@ def upload_file():
         file_url = f"http://{request.host}/files/{final_filename}"
 
         if webhook_url:
-            payload = {"content": f"Uploaded by {user_id}!\n{file_url}"}
+            payload = {"content": f"Uploaded by <@{user_id}>!\n{file_url}"}
             requests.post(webhook_url, json=payload)
 
         return jsonify({
