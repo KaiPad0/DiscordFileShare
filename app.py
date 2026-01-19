@@ -12,13 +12,15 @@ def send_file(filename):
 @app.route('/upload', methods=['GET'])
 def upload_page():
     webhook_url = request.args.get('webhook')
-    return render_template('upload.html', webhook=webhook_url)
+    user_id = request.args.get('userid')
+    return render_template('upload.html', webhook=webhook_url, userid=user_id)
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
         return "ファイルがありません", 400
     
     file = request.files['file']
+    user_id = request.form.get('userid')
     webhook_url = request.form.get('webhook')
 
     if file.filename == '':
@@ -31,14 +33,8 @@ def upload_file():
         file_url = f"http://{request.host}/files/{final_filename}"
 
         if webhook_url:
-            payload = {"content": f"動画のアップロードが完了しました！\n{file_url}"}
-            response = requests.post(webhook_url, json=payload)
-            
-            # ターミナルに結果を表示（トラブルシューティング用）
-            print(f"--- Discord送信ログ ---")
-            print(f"Status Code: {response.status_code}")
-            print(f"Response Body: {response.text}")
-            print(f"----------------------")
+            payload = {"content": f"Uploaded by {user_id}!\n{file_url}"}
+            requests.post(webhook_url, json=payload)
 
         return jsonify({
             'message': 'Upload successful',
