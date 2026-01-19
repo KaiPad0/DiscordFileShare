@@ -25,6 +25,8 @@ def upload_file():
         final_filename = f"{dt.strftime("%Y%m%d%H%M%S")}.mp4"
         final_path = os.path.join("files", final_filename)
         file.save(final_path)
+        file_url = f"http://{request.host}/files/{final_filename}"
+        return f"アップロード成功！<br>URL: <a href='{file_url}'>{file_url}</a>"
     
         
 if __name__=="__main__":
