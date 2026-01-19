@@ -11,7 +11,7 @@ def send_file(filename):
 
 @app.route('/upload', methods=['GET'])
 def upload_page():
-    webhook_url = request.args.get('webhook')
+    webhook_url = request.args.get('webhook',webhook=webhook_url)
     return render_template('upload.html')
 @app.route('/upload', methods=['POST'])
 def upload_file():
