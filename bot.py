@@ -1,7 +1,10 @@
 import discord
 from discord import app_commands
+from dotenv import load_dotenv
+load_dotenv()
+import os
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = os.getenv('TOKEN')
 FLASK_SERVER_URL = "http://kaipad123.servemp3.com:5000/upload" # ラズパイのURL
 intents = discord.Intents.default() 
 client = discord.Client(intents=intents) 
