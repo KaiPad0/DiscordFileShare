@@ -30,7 +30,7 @@ def upload_file():
         final_filename = f"{dt.strftime("%Y%m%d%H%M%S")}.mov"
         final_path = os.path.join("files", final_filename)
         file.save(final_path)
-        file_url = f"http://{request.host}/files/{final_filename}"
+        file_url = f"https://{request.host}/files/{final_filename}"
 
         """if webhook_url:
             payload = {"content": f"Uploaded by <@{user_id}>!\n{file_url}"}

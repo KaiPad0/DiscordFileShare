@@ -128,6 +128,7 @@
                 // 成功時：URLを表示エリアに入れる
                 urlInput.value = uploadedUrl;
                 resultArea.style.display = "block"; // エリアを表示
+                form.reset();
                 
                 status.innerText = "アップロード完了！下のボタンでコピーしてください。";
                 submitBtn.innerText = "アップロード";
