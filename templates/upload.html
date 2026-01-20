@@ -21,13 +21,29 @@
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            width: 300px;
+            width: 320px;
         }
         input[type="file"] {
             margin-bottom: 20px;
             width: 100%;
         }
-        button {
+        /* 結果表示エリアのスタイル */
+        #resultArea {
+            display: none; /* 最初は隠す */
+            margin-top: 15px;
+            background: #202225;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        #urlInput {
+            width: 70%;
+            padding: 5px;
+            border: none;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+        /* メインボタン */
+        .upload-btn {
             background-color: #5865F2;
             color: white;
             border: none;
@@ -38,50 +54,66 @@
             width: 100%;
             transition: background-color 0.2s;
         }
-        button:hover { background-color: #4752c4; }
-        button:disabled { background-color: #72767d; cursor: not-allowed; }
+        .upload-btn:hover { background-color: #4752c4; }
+        .upload-btn:disabled { background-color: #72767d; cursor: not-allowed; }
+
+        /* コピーボタン（小さい） */
+        .copy-btn {
+            background-color: #3ba55c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
         
-        /* ステータス表示のスタイル調整 */
         #status {
             margin-top: 15px;
             font-size: 0.9rem;
             min-height: 1.2em;
         }
-        .success { color: #43b581; } /* 成功時の緑色 */
-        .error { color: #f04747; }   /* エラー時の赤色 */
+        .error { color: #f04747; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>ファイルのURL</h2>
+        <h2>動画アップローダー</h2>
         <form id="uploadForm">
             <input type="file" name="file" accept="video/*" required>
             <br>
-            <button type="submit" id="submitBtn">アップロード＆コピー</button>
+            <button type="submit" id="submitBtn" class="upload-btn">アップロード</button>
         </form>
+
+        <div id="resultArea">
+            <input type="text" id="urlInput" readonly>
+            <button id="copyBtn" class="copy-btn">コピー</button>
+        </div>
+
         <p id="status"></p>
     </div>
 
     <script>
         const form = document.getElementById('uploadForm');
-        const btn = document.getElementById('submitBtn');
+        const submitBtn = document.getElementById('submitBtn');
         const status = document.getElementById('status');
+        const resultArea = document.getElementById('resultArea');
+        const urlInput = document.getElementById('urlInput');
+        const copyBtn = document.getElementById('copyBtn');
 
+        // アップロード処理
         form.onsubmit = async function(e) {
-            // 1. 本来のフォーム送信（ページリロード）をキャンセル
             e.preventDefault();
 
-            // UIを「送信中」の状態にする
-            btn.disabled = true;
-            btn.innerText = "処理中...";
-            status.innerText = "動画をアップロードしています...";
-            status.className = ""; // クラスリセット
+            // UIリセット
+            submitBtn.disabled = true;
+            submitBtn.innerText = "アップロード中...";
+            status.innerText = "処理を行っています...";
+            status.className = "";
+            resultArea.style.display = "none"; // 前の結果を隠す
 
-            // フォームデータを取得
             const formData = new FormData(form);
 
             try {
-                // 2. Fetch APIを使ってバックグラウンドで送信 (/upload はサーバーのエンドポイントに合わせてください)
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -91,30 +123,44 @@
                     throw new Error(`サーバーエラー: ${response.status}`);
                 }
 
-                // 3. サーバーから返ってきたテキスト（URL）を取得
-                // ※サーバーがJSONを返す場合は await response.json() を使ってください
                 const uploadedUrl = await response.text();
 
-                // 4. クリップボードにコピー
-                await navigator.clipboard.writeText(uploadedUrl);
-
-                // 成功メッセージ
-                status.innerText = "URLをコピーしました！";
-                status.className = "success";
-                btn.innerText = "コピー完了";
-
-                // 3秒後にボタンを元に戻す（連続投稿用）
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.innerText = "アップロード＆コピー";
-                }, 3000);
+                // 成功時：URLを表示エリアに入れる
+                urlInput.value = uploadedUrl;
+                resultArea.style.display = "block"; // エリアを表示
+                
+                status.innerText = "アップロード完了！下のボタンでコピーしてください。";
+                submitBtn.innerText = "アップロード";
+                submitBtn.disabled = false;
 
             } catch (error) {
                 console.error(error);
-                status.innerText = "エラーが発生しました: " + error.message;
+                status.innerText = "エラー: " + error.message;
                 status.className = "error";
-                btn.disabled = false;
-                btn.innerText = "再試行";
+                submitBtn.disabled = false;
+                submitBtn.innerText = "再試行";
+            }
+        };
+
+        // コピーボタンの処理（ここならクリック直後なので確実に動く）
+        copyBtn.onclick = async function() {
+            try {
+                // Inputの中身を選択状態にする（見た目のわかりやすさのため）
+                urlInput.select(); 
+                
+                // クリップボードに書き込む
+                await navigator.clipboard.writeText(urlInput.value);
+                
+                // ボタンのテキストを一瞬変える
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = "完了!";
+                setTimeout(() => {
+                    copyBtn.innerText = originalText;
+                }, 2000);
+                
+            } catch (err) {
+                status.innerText = "コピーに失敗しました";
+                console.error(err);
             }
         };
     </script>
