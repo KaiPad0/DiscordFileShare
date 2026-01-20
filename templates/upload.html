@@ -62,26 +62,48 @@
         <p id="status"></p>
     </div>
 
-    <script>
+   <script>
         const form = document.getElementById('uploadForm');
         const btn = document.getElementById('submitBtn');
         const status = document.getElementById('status');
 
+        // クリップボードにコピーする関数（新旧両対応）
+        function copyText(text) {
+            if (navigator.clipboard) {
+                // 新しい方法（HTTPS / localhost用）
+                return navigator.clipboard.writeText(text);
+            } else {
+                // 古い方法（HTTPなどのセキュリティ制限下用）
+                return new Promise((resolve, reject) => {
+                    try {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        // 画面外に飛ばすとスマホでバグることがあるので、見えないように配置
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+        }
+
         form.onsubmit = async function(e) {
-            // 1. 本来のフォーム送信（ページリロード）をキャンセル
             e.preventDefault();
 
-            // UIを「送信中」の状態にする
             btn.disabled = true;
             btn.innerText = "処理中...";
             status.innerText = "動画をアップロードしています...";
-            status.className = ""; // クラスリセット
+            status.className = "";
 
-            // フォームデータを取得
             const formData = new FormData(form);
 
             try {
-                // 2. Fetch APIを使ってバックグラウンドで送信 (/upload はサーバーのエンドポイントに合わせてください)
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -91,19 +113,16 @@
                     throw new Error(`サーバーエラー: ${response.status}`);
                 }
 
-                // 3. サーバーから返ってきたテキスト（URL）を取得
-                // ※サーバーがJSONを返す場合は await response.json() を使ってください
+                // サーバーからURLを取得（もしサーバーがJSONを返すなら await response.json() して調整）
                 const uploadedUrl = await response.text();
 
-                // 4. クリップボードにコピー
-                await navigator.clipboard.writeText(uploadedUrl);
+                // ★ここを自作関数に変更しました
+                await copyText(uploadedUrl);
 
-                // 成功メッセージ
                 status.innerText = "URLをコピーしました！";
                 status.className = "success";
                 btn.innerText = "コピー完了";
 
-                // 3秒後にボタンを元に戻す（連続投稿用）
                 setTimeout(() => {
                     btn.disabled = false;
                     btn.innerText = "アップロード＆コピー";
@@ -111,7 +130,7 @@
 
             } catch (error) {
                 console.error(error);
-                status.innerText = "エラーが発生しました: " + error.message;
+                status.innerText = "エラー: " + error.message;
                 status.className = "error";
                 btn.disabled = false;
                 btn.innerText = "再試行";
