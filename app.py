@@ -29,7 +29,7 @@ def upload_file():
         _, ext = os.path.splitext(file.filename)
         ext = ext.lower()
         if ext == '.mp4':
-            ext == '.mov'
+            ext = '.mov'
         dt = datetime.now()
         final_filename = f"{dt.strftime("%Y%m%d%H%M%S")}{ext}"
         final_path = os.path.join("files", final_filename)
