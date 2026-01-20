@@ -23,7 +23,7 @@ async def upload(interaction: discord.Interaction):
     #user_id = interaction.user.id
 
     # ユーザーには「ここからアップロードしてね」というリンクを送る
-    upload_url = f"https://kaipad123.servemp3.com:5000/upload"
+    upload_url = f"https://kaipad123.servemp3.com/upload"
     
     await interaction.followup.send(f"以下のリンクから動画をアップロードしてください！\n{upload_url}", ephemeral=True)
 
