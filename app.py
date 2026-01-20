@@ -26,8 +26,12 @@ def upload_file():
     if file.filename == '':
         return "ファイルが選択されていません", 400
     if file:
+        ext = os.path.splitext(file.filename)
+        ext = ext.lower()
+        if ext == '.mp4':
+            ext == '.mov'
         dt = datetime.now()
-        final_filename = f"{dt.strftime("%Y%m%d%H%M%S")}.mov"
+        final_filename = f"{dt.strftime("%Y%m%d%H%M%S")}{ext}"
         final_path = os.path.join("files", final_filename)
         file.save(final_path)
         file_url = f"https://{request.host}/files/{final_filename}"
