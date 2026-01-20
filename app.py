@@ -30,8 +30,18 @@ def upload_file():
         final_filename = f"{dt.strftime("%Y%m%d%H%M%S")}.mov"
         final_path = os.path.join("files", final_filename)
         file.save(final_path)
-        filename = f"http://{request.host}/files/{final_filename}"
-        return filename
+        file_url = f"http://{request.host}/files/{final_filename}"
+
+        """if webhook_url:
+            payload = {"content": f"Uploaded by <@{user_id}>!\n{file_url}"}
+            requests.post(webhook_url, json=payload)"""
+
+        """return jsonify({
+            'message': 'Upload successful',
+            'url': file_url,
+            'original_name': file.filename
+        })"""
+        return file_url
     
         
 if __name__=="__main__":

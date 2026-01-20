@@ -93,18 +93,21 @@
 
                 // 3. サーバーから返ってきたテキスト（URL）を取得
                 // ※サーバーがJSONを返す場合は await response.json() を使ってください
-                const fileName = await response.text();
-
-                const fullUrl = `${window.location.origin}/uploads/${fileName}`;
+                const uploadedUrl = await response.text();
 
                 // 4. クリップボードにコピー
-                await navigator.clipboard.writeText(fullUrl);
+                await navigator.clipboard.writeText(uploadedUrl);
 
                 // 成功メッセージ
                 status.innerText = "URLをコピーしました！";
                 status.className = "success";
                 btn.innerText = "コピー完了";
 
+                // 3秒後にボタンを元に戻す（連続投稿用）
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = "アップロード＆コピー";
+                }, 3000);
 
             } catch (error) {
                 console.error(error);
