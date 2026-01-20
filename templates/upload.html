@@ -95,6 +95,8 @@
                 // ※サーバーがJSONを返す場合は await response.json() を使ってください
                 const uploadedUrl = await response.text();
 
+                const fullUrl = `${window.location.origin}/uploads/${fileName}`;
+
                 // 4. クリップボードにコピー
                 await navigator.clipboard.writeText(uploadedUrl);
 
