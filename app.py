@@ -26,7 +26,7 @@ def upload_file():
     if file.filename == '':
         return "ファイルが選択されていません", 400
     if file:
-        ext = os.path.splitext(file.filename)
+        _, ext = os.path.splitext(file.filename)
         ext = ext.lower()
         if ext == '.mp4':
             ext == '.mov'
