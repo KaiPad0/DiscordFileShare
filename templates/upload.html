@@ -27,9 +27,34 @@
             margin-bottom: 20px;
             width: 100%;
         }
+        
+        /* --- 追加: 進捗バーのスタイル --- */
+        #progressContainer {
+            display: none; /* 最初は隠す */
+            width: 100%;
+            background-color: #40444b;
+            border-radius: 4px;
+            margin-top: 15px;
+            height: 10px;
+            overflow: hidden;
+        }
+        #progressBar {
+            width: 0%;
+            height: 100%;
+            background-color: #5865F2; /* Discord Blue */
+            transition: width 0.1s linear;
+        }
+        #progressText {
+            font-size: 0.8rem;
+            color: #b9bbbe;
+            margin-top: 5px;
+            display: none;
+        }
+        /* ----------------------------- */
+
         /* 結果表示エリアのスタイル */
         #resultArea {
-            display: none; /* 最初は隠す */
+            display: none; 
             margin-top: 15px;
             background: #202225;
             padding: 10px;
@@ -41,6 +66,8 @@
             border: none;
             border-radius: 3px;
             margin-right: 5px;
+            background-color: #40444b;
+            color: white;
         }
         /* メインボタン */
         .upload-btn {
@@ -57,7 +84,7 @@
         .upload-btn:hover { background-color: #4752c4; }
         .upload-btn:disabled { background-color: #72767d; cursor: not-allowed; }
 
-        /* コピーボタン（小さい） */
+        /* コピーボタン */
         .copy-btn {
             background-color: #3ba55c;
             color: white;
@@ -84,6 +111,11 @@
             <button type="submit" id="submitBtn" class="upload-btn">アップロード</button>
         </form>
 
+        <div id="progressContainer">
+            <div id="progressBar"></div>
+        </div>
+        <p id="progressText">0%</p>
+
         <div id="resultArea">
             <input type="text" id="urlInput" readonly>
             <button id="copyBtn" class="copy-btn">コピー</button>
@@ -99,66 +131,98 @@
         const resultArea = document.getElementById('resultArea');
         const urlInput = document.getElementById('urlInput');
         const copyBtn = document.getElementById('copyBtn');
+        
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
 
         // アップロード処理
-        form.onsubmit = async function(e) {
+        form.onsubmit = function(e) {
             e.preventDefault();
 
             // UIリセット
             submitBtn.disabled = true;
-            submitBtn.innerText = "アップロード中...";
-            status.innerText = "処理を行っています...";
             status.className = "";
-            resultArea.style.display = "none"; // 前の結果を隠す
+            status.innerText = "アップロード準備中...";
+            resultArea.style.display = "none";
+            
+            // プログレスバーのリセットと表示
+            progressContainer.style.display = "block";
+            progressText.style.display = "block";
+            progressBar.style.width = "0%";
+            progressText.innerText = "0%";
 
             const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
 
-            try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error(`サーバーエラー: ${response.status}`);
+            // --- 進捗イベント (ここが重要) ---
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.innerText = percentComplete + '%';
+                    
+                    if (percentComplete === 100) {
+                        status.innerText = "サーバー処理中...";
+                    }
                 }
+            };
 
-                const uploadedUrl = await response.text();
+            // --- 完了時の処理 ---
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // 成功時 (Flaskから返ってきたURLを取得)
+                    const uploadedUrl = xhr.responseText;
 
-                // 成功時：URLを表示エリアに入れる
-                urlInput.value = uploadedUrl;
-                resultArea.style.display = "block"; // エリアを表示
-                form.reset();
+                    urlInput.value = uploadedUrl;
+                    resultArea.style.display = "block";
+                    form.reset();
+                    
+                    status.innerText = "完了！下のボタンでコピーしてください。";
+                    
+                    // プログレスバーを隠す（または満タンのまま残すならここは削除）
+                    setTimeout(() => {
+                        progressContainer.style.display = "none";
+                        progressText.style.display = "none";
+                    }, 1000);
+
+                } else {
+                    // エラー時
+                    status.innerText = "エラー: " + xhr.status + " " + xhr.responseText;
+                    status.className = "error";
+                    progressContainer.style.display = "none";
+                    progressText.style.display = "none";
+                }
                 
-                status.innerText = "アップロード完了！下のボタンでコピーしてください。";
-                submitBtn.innerText = "アップロード";
                 submitBtn.disabled = false;
+                submitBtn.innerText = "アップロード";
+            };
 
-            } catch (error) {
-                console.error(error);
-                status.innerText = "エラー: " + error.message;
+            // --- 通信エラー時の処理 ---
+            xhr.onerror = function() {
+                status.innerText = "ネットワークエラーが発生しました";
                 status.className = "error";
                 submitBtn.disabled = false;
-                submitBtn.innerText = "再試行";
-            }
+                progressContainer.style.display = "none";
+                progressText.style.display = "none";
+            };
+
+            // 送信実行
+            xhr.open('POST', '/upload', true);
+            xhr.send(formData);
         };
 
-        // コピーボタンの処理（ここならクリック直後なので確実に動く）
+        // コピーボタンの処理
         copyBtn.onclick = async function() {
             try {
-                // Inputの中身を選択状態にする（見た目のわかりやすさのため）
                 urlInput.select(); 
-                
-                // クリップボードに書き込む
                 await navigator.clipboard.writeText(urlInput.value);
                 
-                // ボタンのテキストを一瞬変える
                 const originalText = copyBtn.innerText;
                 copyBtn.innerText = "完了!";
                 setTimeout(() => {
                     copyBtn.innerText = originalText;
                 }, 2000);
-                
             } catch (err) {
                 status.innerText = "コピーに失敗しました";
                 console.error(err);
