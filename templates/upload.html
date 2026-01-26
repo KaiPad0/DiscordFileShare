@@ -28,9 +28,9 @@
             width: 100%;
         }
         
-        /* --- 追加: 進捗バーのスタイル --- */
+        /* --- 進捗バー --- */
         #progressContainer {
-            display: none; /* 最初は隠す */
+            display: none;
             width: 100%;
             background-color: #40444b;
             border-radius: 4px;
@@ -41,18 +41,21 @@
         #progressBar {
             width: 0%;
             height: 100%;
-            background-color: #5865F2; /* Discord Blue */
-            transition: width 0.1s linear;
+            background-color: #5865F2;
+            transition: width 0.2s linear; /* 少し滑らかに動くように変更 */
         }
-        #progressText {
+
+        /* --- 進捗情報のテキストエリア --- */
+        #progressInfo {
+            display: none;
+            margin-top: 5px;
             font-size: 0.8rem;
             color: #b9bbbe;
-            margin-top: 5px;
-            display: none;
+            justify-content: space-between; /* 左右に配置 */
+            display: flex; /* 初期は非表示だがJSでflexにする */
         }
         /* ----------------------------- */
 
-        /* 結果表示エリアのスタイル */
         #resultArea {
             display: none; 
             margin-top: 15px;
@@ -69,7 +72,6 @@
             background-color: #40444b;
             color: white;
         }
-        /* メインボタン */
         .upload-btn {
             background-color: #5865F2;
             color: white;
@@ -84,7 +86,6 @@
         .upload-btn:hover { background-color: #4752c4; }
         .upload-btn:disabled { background-color: #72767d; cursor: not-allowed; }
 
-        /* コピーボタン */
         .copy-btn {
             background-color: #3ba55c;
             color: white;
@@ -114,7 +115,11 @@
         <div id="progressContainer">
             <div id="progressBar"></div>
         </div>
-        <p id="progressText">0%</p>
+        
+        <div id="progressInfo" style="display: none;">
+            <span id="percentText">0%</span>
+            <span id="speedText">計算中...</span>
+        </div>
 
         <div id="resultArea">
             <input type="text" id="urlInput" readonly>
@@ -134,22 +139,37 @@
         
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
+        const progressInfo = document.getElementById('progressInfo');
+        const percentText = document.getElementById('percentText');
+        const speedText = document.getElementById('speedText');
 
-        // ★追加: アップロード中かどうかのフラグ
         let isUploading = false;
 
-        // ★追加: ページを離れようとした（リロード含む）時の警告
+        // リロード防止
         window.addEventListener('beforeunload', function (e) {
             if (isUploading) {
-                // 最近のブラウザはカスタムメッセージを表示できませんが、
-                // これを設定することで「変更が保存されていません」等の標準警告が出ます
                 e.preventDefault();
                 e.returnValue = '';
             }
         });
 
-        // アップロード処理
+        // --- ヘルパー関数: バイト数を読みやすく変換 (例: 1024 -> 1.0 KB) ---
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // --- ヘルパー関数: 秒数をMM:SS形式に変換 ---
+        function formatTime(seconds) {
+            if (!isFinite(seconds) || seconds < 0) return "--:--";
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
         form.onsubmit = function(e) {
             e.preventDefault();
 
@@ -160,32 +180,56 @@
             resultArea.style.display = "none";
             
             progressContainer.style.display = "block";
-            progressText.style.display = "block";
+            progressInfo.style.display = "flex"; // flexboxとして表示
             progressBar.style.width = "0%";
-            progressText.innerText = "0%";
+            percentText.innerText = "0%";
+            speedText.innerText = "計算中...";
 
-            // ★追加: フラグをONにする
             isUploading = true;
 
             const formData = new FormData(form);
             const xhr = new XMLHttpRequest();
 
+            // 速度計算用の変数
+            let lastLoaded = 0;
+            let lastTime = Date.now();
+
             // --- 進捗イベント ---
             xhr.upload.onprogress = function(event) {
                 if (event.lengthComputable) {
+                    const now = Date.now();
+                    const timeDiff = (now - lastTime) / 1000; // 秒単位
+
+                    // 0.5秒ごとに速度と残り時間を更新 (数値のチラつき防止)
+                    if (timeDiff >= 0.5) {
+                        const loadedDiff = event.loaded - lastLoaded;
+                        const speedBytesPerSec = loadedDiff / timeDiff; // B/s
+                        
+                        const remainingBytes = event.total - event.loaded;
+                        const remainingSeconds = remainingBytes / speedBytesPerSec;
+
+                        // テキスト更新 (例: 2.5 MB/s | 残り 00:45)
+                        speedText.innerText = `${formatBytes(speedBytesPerSec)}/s | 残り ${formatTime(remainingSeconds)}`;
+                        
+                        // 計算基準点を更新
+                        lastLoaded = event.loaded;
+                        lastTime = now;
+                    }
+
+                    // パーセンテージは毎回更新してOK
                     const percentComplete = Math.round((event.loaded / event.total) * 100);
                     progressBar.style.width = percentComplete + '%';
-                    progressText.innerText = percentComplete + '%';
+                    percentText.innerText = percentComplete + '%';
                     
                     if (percentComplete === 100) {
                         status.innerText = "サーバー処理中...";
+                        speedText.innerText = "完了処理中...";
                     }
                 }
             };
 
             // --- 完了時の処理 ---
             xhr.onload = function() {
-                // ★追加: 完了したのでフラグをOFF
                 isUploading = false;
 
                 if (xhr.status === 200) {
@@ -197,13 +241,13 @@
                     
                     setTimeout(() => {
                         progressContainer.style.display = "none";
-                        progressText.style.display = "none";
+                        progressInfo.style.display = "none";
                     }, 1000);
                 } else {
                     status.innerText = "エラー: " + xhr.status + " " + xhr.responseText;
                     status.className = "error";
                     progressContainer.style.display = "none";
-                    progressText.style.display = "none";
+                    progressInfo.style.display = "none";
                 }
                 submitBtn.disabled = false;
                 submitBtn.innerText = "アップロード";
@@ -211,21 +255,23 @@
 
             // --- エラー時の処理 ---
             xhr.onerror = function() {
-                // ★追加: エラー時もフラグをOFF
                 isUploading = false;
 
                 status.innerText = "ネットワークエラーが発生しました";
                 status.className = "error";
                 submitBtn.disabled = false;
                 progressContainer.style.display = "none";
-                progressText.style.display = "none";
+                progressInfo.style.display = "none";
             };
 
             xhr.open('POST', '/upload', true);
+            
+            // 送信直前に時間をリセットして初期計算の精度を上げる
+            lastTime = Date.now();
             xhr.send(formData);
         };
 
-        // コピーボタンの処理（変更なし）
+        // コピーボタンの処理
         copyBtn.onclick = async function() {
             try {
                 urlInput.select(); 
