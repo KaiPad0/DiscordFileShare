@@ -136,6 +136,19 @@
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
 
+        // ★追加: アップロード中かどうかのフラグ
+        let isUploading = false;
+
+        // ★追加: ページを離れようとした（リロード含む）時の警告
+        window.addEventListener('beforeunload', function (e) {
+            if (isUploading) {
+                // 最近のブラウザはカスタムメッセージを表示できませんが、
+                // これを設定することで「変更が保存されていません」等の標準警告が出ます
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
         // アップロード処理
         form.onsubmit = function(e) {
             e.preventDefault();
@@ -146,16 +159,18 @@
             status.innerText = "アップロード準備中...";
             resultArea.style.display = "none";
             
-            // プログレスバーのリセットと表示
             progressContainer.style.display = "block";
             progressText.style.display = "block";
             progressBar.style.width = "0%";
             progressText.innerText = "0%";
 
+            // ★追加: フラグをONにする
+            isUploading = true;
+
             const formData = new FormData(form);
             const xhr = new XMLHttpRequest();
 
-            // --- 進捗イベント (ここが重要) ---
+            // --- 進捗イベント ---
             xhr.upload.onprogress = function(event) {
                 if (event.lengthComputable) {
                     const percentComplete = Math.round((event.loaded / event.total) * 100);
@@ -170,36 +185,35 @@
 
             // --- 完了時の処理 ---
             xhr.onload = function() {
-                if (xhr.status === 200) {
-                    // 成功時 (Flaskから返ってきたURLを取得)
-                    const uploadedUrl = xhr.responseText;
+                // ★追加: 完了したのでフラグをOFF
+                isUploading = false;
 
+                if (xhr.status === 200) {
+                    const uploadedUrl = xhr.responseText;
                     urlInput.value = uploadedUrl;
                     resultArea.style.display = "block";
                     form.reset();
-                    
                     status.innerText = "完了！下のボタンでコピーしてください。";
                     
-                    // プログレスバーを隠す（または満タンのまま残すならここは削除）
                     setTimeout(() => {
                         progressContainer.style.display = "none";
                         progressText.style.display = "none";
                     }, 1000);
-
                 } else {
-                    // エラー時
                     status.innerText = "エラー: " + xhr.status + " " + xhr.responseText;
                     status.className = "error";
                     progressContainer.style.display = "none";
                     progressText.style.display = "none";
                 }
-                
                 submitBtn.disabled = false;
                 submitBtn.innerText = "アップロード";
             };
 
-            // --- 通信エラー時の処理 ---
+            // --- エラー時の処理 ---
             xhr.onerror = function() {
+                // ★追加: エラー時もフラグをOFF
+                isUploading = false;
+
                 status.innerText = "ネットワークエラーが発生しました";
                 status.className = "error";
                 submitBtn.disabled = false;
@@ -207,24 +221,19 @@
                 progressText.style.display = "none";
             };
 
-            // 送信実行
             xhr.open('POST', '/upload', true);
             xhr.send(formData);
         };
 
-        // コピーボタンの処理
+        // コピーボタンの処理（変更なし）
         copyBtn.onclick = async function() {
             try {
                 urlInput.select(); 
                 await navigator.clipboard.writeText(urlInput.value);
-                
                 const originalText = copyBtn.innerText;
                 copyBtn.innerText = "完了!";
-                setTimeout(() => {
-                    copyBtn.innerText = originalText;
-                }, 2000);
+                setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
             } catch (err) {
-                status.innerText = "コピーに失敗しました";
                 console.error(err);
             }
         };
