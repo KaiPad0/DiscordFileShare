@@ -1,6 +1,14 @@
 import os
 import requests
-from flask import Flask,request,send_from_directory,render_template,jsonify
+import tempfile  # ★追加
+
+# ★Flaskが一時ファイルを作る場所を、容量たっぷりのHDDに変更する
+tempfile.tempdir = "/mnt/HDDW/flask_tmp" 
+
+# 事前にディレクトリがないとエラーになるので作っておく
+os.makedirs(tempfile.tempdir, exist_ok=True)
+
+from flask import Flask, request, send_from_directory, render_template, jsonify
 from datetime import datetime
 
 app = Flask(__name__)
